@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>โปรแกรมคำนวณวันทำงาน</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1d2330;--mut:#6b7280;--ac:#2563eb;--bd:#e3e6ea;--off:#fef3c7;--hol:#fee2e2;--ok:#dcfce7;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12151b;--card:#1b2029;--tx:#e8eaee;--mut:#9aa3b2;--ac:#6ea0ff;--bd:#2c3340;--off:#4a3b10;--hol:#4d1d1d;--ok:#14391f}}
+:root[data-theme="dark"]{--bg:#12151b;--card:#1b2029;--tx:#e8eaee;--mut:#9aa3b2;--ac:#6ea0ff;--bd:#2c3340;--off:#4a3b10;--hol:#4d1d1d;--ok:#14391f}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:"Noto Sans Thai",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:1.3rem;margin:8px 0 16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:14px}
+label{display:block;font-size:.85rem;color:var(--mut);margin-bottom:4px}
+input[type=date],input[type=number],input[type=text],input[type=password],select{width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+.row,#kBox{margin-bottom:10px}select{margin-bottom:10px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.add{display:flex;gap:8px;align-items:end}.add div{flex:1}
+button{padding:10px 16px;border:0;border-radius:8px;background:var(--ac);color:#fff;font:inherit;cursor:pointer}
+button.big{width:100%;margin-top:14px;font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{background:var(--hol);border-radius:99px;padding:3px 10px;font-size:.85rem;cursor:pointer}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center}
+.stat b{display:block;font-size:2rem;color:var(--ac)}.stat span{color:var(--mut);font-size:.85rem}
+.lists{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:480px){.lists{grid-template-columns:1fr}}
+ul{list-style:none;margin:6px 0 0;padding:0;font-size:.88rem}
+li{padding:4px 8px;border-radius:6px;margin-bottom:3px}
+.w li{background:var(--ok)}.o li{background:var(--off)}.o li.h{background:var(--hol)}
+.err{color:#dc2626;margin-top:10px}
+small{color:var(--mut)}
+</style>
+</head>
+<body>
+<main>
+<h1>📅 โปรแกรมคำนวณวันทำงาน</h1>
+
+<div class="card">
+  <label for="mode">โหมด</label>
+  <select id="mode"><option value="range">หาจำนวนวัน (ระบุวันเริ่มต้น-สิ้นสุด)</option><option value="plus">หาวันสิ้นสุด (ระบุจำนวนวัน)</option></select>
+  <div class="row">
+    <div><label for="s">วันที่เริ่มต้น</label><input type="date" id="s"></div>
+    <div id="eBox"><label for="e">วันที่สิ้นสุด</label><input type="date" id="e"></div>
+    <div id="nBox" hidden><label for="n">จำนวนวัน</label><input type="number" id="n" min="1" value="30"></div>
+  </div>
+  <div id="kBox" hidden><label for="kind">นับเป็น</label><select id="kind"><option value="cal">วันปกติ (ทุกวัน)</option><option value="work">วันทำงาน (ไม่รวมวันหยุด)</option></select></div>
+  <label for="inc">วิธีนับ</label>
+  <select id="inc"><option value="in">นับวันเริ่มต้นเป็นวันที่ 1</option><option value="next">เริ่มนับจากวันถัดไป</option></select>
+  <p><small>วันหยุดประจำสัปดาห์: เสาร์-อาทิตย์</small></p>
+  <div class="add">
+    <div><label for="h">เพิ่มวันหยุดพิเศษ/นักขัตฤกษ์</label><input type="date" id="h"></div>
+    <button id="addBtn" type="button">เพิ่ม</button>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="row" style="margin-top:10px">
+    <div><label for="hn">ชื่อวันหยุด (ไม่บังคับ)</label><input type="text" id="hn"></div>
+    <div><label for="pw">รหัสผู้ดูแล (เฉพาะเพิ่ม/ลบ)</label><input type="password" id="pw"></div>
+  </div>
+  <small>ทุกคนดูวันหยุดได้ เฉพาะผู้ที่มีรหัสเท่านั้นที่เพิ่ม/ลบได้ (แตะวันหยุดเพื่อลบ)</small>
+  <button class="big" id="go" type="button">คำนวณ</button>
+  <div class="err" id="err"></div>
+</div>
+
+<div id="out" hidden>
+  <div class="card" id="endRes" hidden><label>วันสิ้นสุด</label><b id="endv" style="font-size:1.3rem"></b></div>
+  <div class="card stats">
+    <div class="stat"><b id="tot">0</b><span>วันทั้งหมด</span></div>
+    <div class="stat"><b id="wk">0</b><span>วันทำงานจริง</span></div>
+  </div>
+  <div class="card lists">
+    <div class="w"><label>รายการวันทำงาน</label><ul id="wl"></ul></div>
+    <div class="o"><label>รายการวันหยุด</label><ul id="ol"></ul></div>
+  </div>
+</div>
+</main>
+
+<script>
+// ชื่อวันภาษาไทย (อาทิตย์ = 0 ตามมาตรฐาน JavaScript)
+const TH = ["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัสบดี","ศุกร์","เสาร์"];
+const $ = id => document.getElementById(id);
+
+// วันหยุดพิเศษตั้งต้น (ตัวอย่างสมมติ แก้ไข/ลบได้บนหน้าเว็บ)
+let holidays = new Set(), names = {};  // โหลดจากฐานข้อมูล Neon ผ่าน /api/holidays
+
+// แปลง "YYYY-MM-DD" เป็นเวลา UTC เพื่อเลี่ยงปัญหา timezone
+const toUTC = s => { const [y,m,d] = s.split("-").map(Number); return Date.UTC(y,m-1,d); };
+const toStr = t => new Date(t).toISOString().slice(0,10);
+const fmt = t => `${toStr(t)} (${TH[new Date(t).getUTCDay()]})`;
+
+const pw = () => $("pw").value;
+const setErr = m => { $("err").textContent = m; };
+
+// เรียก API วันหยุด (ส่งรหัสผู้ดูแลไปด้วยเสมอ)
+async function api(method, body){
+  const r = await fetch("/api/holidays", {method, headers:{"Content-Type":"application/json","x-admin-password":pw()}, body: body ? JSON.stringify(body) : undefined});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || "เกิดข้อผิดพลาด");
+  return j;
+}
+async function load(){
+  try {
+    const rows = await api("GET");
+    holidays = new Set(rows.map(x => x.date));
+    names = Object.fromEntries(rows.map(x => [x.date, x.name]));
+    renderChips();
+  } catch(e){ setErr("โหลดวันหยุดไม่สำเร็จ: " + e.message); }
+}
+function renderChips(){
+  const box = $("chips"); box.innerHTML = "";
+  [...holidays].sort().forEach(d => {
+    const c = document.createElement("span");
+    c.className = "chip"; c.textContent = d + (names[d] ? " " + names[d] : "") + " ✕";
+    c.onclick = async () => {
+      if (!pw()) return setErr("ใส่รหัสผู้ดูแลก่อนลบวันหยุด");
+      try { await api("DELETE", {date:d}); setErr(""); await load(); } catch(e){ setErr(e.message); }
+    };
+    box.appendChild(c);
+  });
+}
+$("addBtn").onclick = async () => {
+  if (!$("h").value) return;
+  if (!pw()) return setErr("ใส่รหัสผู้ดูแลก่อนเพิ่มวันหยุด");
+  try {
+    await api("POST", {date:$("h").value, name:$("hn").value});
+    $("h").value = ""; $("hn").value = ""; setErr(""); await load();
+  } catch(e){ setErr(e.message); }
+};
+
+$("mode").onchange = () => {
+  const r = $("mode").value === "range";
+  $("eBox").hidden = !r; $("nBox").hidden = r; $("kBox").hidden = r;
+  $("out").hidden = true;
+};
+
+const DAY = 86400000;
+// จัดประเภทวัน: "h" = วันหยุดพิเศษ, "w" = เสาร์-อาทิตย์, "ok" = วันทำงาน
+const classify = t => {
+  if (holidays.has(toStr(t))) return "h";  // ตรวจวันหยุดพิเศษก่อน ไม่นับซ้ำกับเสาร์-อาทิตย์
+  const wd = new Date(t).getUTCDay();
+  return (wd === 0 || wd === 6) ? "w" : "ok";
+};
+
+$("go").onclick = () => {
+  $("err").textContent = "";
+  const fail = m => { $("err").textContent = m; $("out").hidden = true; };
+  if (!$("s").value) return fail("กรุณาเลือกวันที่เริ่มต้น");
+  const start = toUTC($("s").value);
+  // วันแรกที่เริ่มนับ: นับวันนั้นเลย หรือเริ่มจากวันถัดไป
+  const begin = $("inc").value === "in" ? start : start + DAY;
+  const work = [], off = [];
+  const add = (t, c) => c === "ok" ? work.push(t)
+    : off.push([t, c === "h" ? "วันหยุดพิเศษ" : "วันหยุดประจำสัปดาห์", c === "h"]);
+  let total = 0, last = null;
+
+  if ($("mode").value === "range") {
+    if (!$("e").value) return fail("กรุณาเลือกวันที่สิ้นสุด");
+    const end = toUTC($("e").value);
+    if (start > end) return fail("วันที่เริ่มต้นต้องไม่มากกว่าวันที่สิ้นสุด");
+    for (let t = begin; t <= end; t += DAY) { add(t, classify(t)); total++; }
+    $("endRes").hidden = true;
+  } else {
+    // หาวันสิ้นสุด: นับไปทีละวันจนครบจำนวนที่ระบุ
+    const n = parseInt($("n").value, 10);
+    if (!(n >= 1 && n <= 3650)) return fail("กรุณาระบุจำนวนวัน 1-3650");
+    const workOnly = $("kind").value === "work";
+    let counted = 0;
+    for (let t = begin; counted < n; t += DAY) {
+      const c = classify(t); add(t, c); total++;
+      if (!workOnly || c === "ok") { counted++; last = t; }
+    }
+    $("endv").textContent = fmt(last);
+    $("endRes").hidden = false;
+  }
+  $("tot").textContent = total;
+  $("wk").textContent = work.length;
+  $("wl").innerHTML = work.map(t => `<li>${fmt(t)}</li>`).join("");
+  $("ol").innerHTML = off.map(([t,r,h]) => `<li class="${h?"h":""}">${fmt(t)}<br><small>${r}</small></li>`).join("");
+  $("out").hidden = false;
+};
+
+load();
+</script>
+</body>
+</html>

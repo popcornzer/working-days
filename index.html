@@ -114,6 +114,8 @@ $("mode").onchange = () => {
 };
 
 const DAY = 86400000;
+// กันตัวอักษรพิเศษในชื่อวันหยุดไม่ให้กลายเป็น HTML
+const esc = x => x.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 // จัดประเภทวัน: "h" = วันหยุดพิเศษ, "w" = เสาร์-อาทิตย์, "ok" = วันทำงาน
 const classify = t => {
   if (holidays.has(toStr(t))) return "h";  // ตรวจวันหยุดพิเศษก่อน ไม่นับซ้ำกับเสาร์-อาทิตย์
@@ -130,7 +132,7 @@ $("go").onclick = () => {
   const begin = $("inc").value === "in" ? start : start + DAY;
   const work = [], off = [];
   const add = (t, c) => c === "ok" ? work.push(t)
-    : off.push([t, c === "h" ? "วันหยุดพิเศษ" : "วันหยุดประจำสัปดาห์", c === "h"]);
+    : off.push([t, c === "h" ? "วันหยุดพิเศษ" + (names[toStr(t)] ? ": " + names[toStr(t)] : "") : "วันหยุดประจำสัปดาห์", c === "h"]);
   let total = 0, last = null;
 
   if ($("mode").value === "range") {
@@ -155,7 +157,7 @@ $("go").onclick = () => {
   $("tot").textContent = total;
   $("wk").textContent = work.length;
   $("wl").innerHTML = work.map(t => `<li>${fmt(t)}</li>`).join("");
-  $("ol").innerHTML = off.map(([t,r,h]) => `<li class="${h?"h":""}">${fmt(t)}<br><small>${r}</small></li>`).join("");
+  $("ol").innerHTML = off.map(([t,r,h]) => `<li class="${h?"h":""}">${fmt(t)}<br><small>${esc(r)}</small></li>`).join("");
   $("out").hidden = false;
 };
 

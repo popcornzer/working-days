@@ -16,12 +16,27 @@ export default async function handler(req, res) {
     if (!admin || req.headers["x-admin-password"] !== admin) {
       return res.status(401).json({ error: "รหัสผู้ดูแลไม่ถูกต้อง" });
     }
-    const { date, name } = req.body || {};
+    const { action, date, name, oldDate } = req.body || {};
+
+    // ใช้ตรวจรหัสผ่านตอนเข้าสู่ระบบหน้าผู้ดูแล
+    if (req.method === "POST" && action === "verify") return res.status(200).json({ ok: true });
+
     if (!isDate(date)) return res.status(400).json({ error: "รูปแบบวันที่ไม่ถูกต้อง" });
 
     if (req.method === "POST") {
-      await sql`INSERT INTO holidays (holiday_date, name) VALUES (${date}, ${name || ""})
-                ON CONFLICT (holiday_date) DO UPDATE SET name = EXCLUDED.name`;
+      if (oldDate && oldDate !== date) {
+        // แก้ไขโดยเปลี่ยนวันที่: ลบวันเดิมแล้วเพิ่มวันใหม่ในคราวเดียว
+        if (!isDate(oldDate)) return res.status(400).json({ error: "รูปแบบวันที่เดิมไม่ถูกต้อง" });
+        await sql.transaction([
+          sql`DELETE FROM holidays WHERE holiday_date = ${oldDate}`,
+          sql`INSERT INTO holidays (holiday_date, name) VALUES (${date}, ${name || ""})
+              ON CONFLICT (holiday_date) DO UPDATE SET name = EXCLUDED.name`,
+        ]);
+      } else {
+        // เพิ่มใหม่ หรือแก้เฉพาะชื่อ
+        await sql`INSERT INTO holidays (holiday_date, name) VALUES (${date}, ${name || ""})
+                  ON CONFLICT (holiday_date) DO UPDATE SET name = EXCLUDED.name`;
+      }
       return res.status(200).json({ ok: true });
     }
     if (req.method === "DELETE") {
